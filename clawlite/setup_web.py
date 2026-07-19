@@ -51,6 +51,7 @@ _tasks: dict = {
 }
 
 _owner_claim_since: int | None = None
+_reconfigure_mode: bool = False  # ver run(force_reconfigure=...) y form_page()
 
 
 def _run_ollama_check():
@@ -259,6 +260,37 @@ async def form_page(request: Request):
     current = _read_env_values(ENV_PATH)
     missing = [k for k in BOOTSTRAP_REQUIRED_KEYS if not current.get(k)]
 
+    if _reconfigure_mode:
+        # Modo reconfiguración: NO es "pedir lo que falta" (nada falta,
+        # ya está todo configurado) -- es "dejar editar lo que ya existe".
+        # Muestra los 3 campos juntos, precargados con el valor actual --
+        # el orden secuencial de _owner_capture_body() existe solo para el
+        # problema de bootstrap (token debe existir en disco ANTES de
+        # poder auto-capturar el owner id); en reconfiguración el token ya
+        # está guardado, así que ese problema no aplica.
+        import html as _html
+        hints = _read_env_hints(ENV_EXAMPLE_PATH)
+        fields = []
+        for key in BOOTSTRAP_REQUIRED_KEYS:
+            hint = hints.get(key, "")
+            value = _html.escape(current.get(key, ""))
+            fields.append(f"""
+            <div class="field">
+                <label for="{key}">{key}</label>
+                {f'<div class="hint">{hint}</div>' if hint else ''}
+                <input type="text" id="{key}" name="{key}" value="{value}" required>
+            </div>
+            """)
+        body = f"""
+        <h1>🔧 Reconfigurar ClawLite</h1>
+        <p>Editá lo que necesites y guardá. ClawLite se reinicia solo con los valores nuevos.</p>
+        <form method="post" action="/save">
+            {''.join(fields)}
+            <button type="submit">Guardar</button>
+        </form>
+        """
+        return HTMLResponse(_page(body))
+
     if not missing:
         return RedirectResponse(url="/done", status_code=303)
 
@@ -294,6 +326,8 @@ async def save_form(request: Request):
         value = str(value).strip()
         if value:
             _write_env_value(ENV_PATH, key, value)
+    if _reconfigure_mode:
+        return RedirectResponse(url="/done", status_code=303)
     return RedirectResponse(url="/form", status_code=303)
 
 
@@ -333,15 +367,20 @@ app = Starlette(
 _server = None  # instancia viva de uvicorn.Server, para que /done pueda pedirle que se apague
 
 
-def run(host: str = "127.0.0.1", port: int = 8710):
+def run(host: str = "127.0.0.1", port: int = 8710, force_reconfigure: bool = False):
     """
     Bloqueante -- retorna solo cuando /done pide el apagado (should_exit),
     o si el usuario corta el proceso. El launcher depende de que ESTA
     llamada retorne para recién ahí seguir con clawlite.main.main() --
     por eso no se usa uvicorn.run() (no deja forma de pararlo desde
     adentro), sino Config+Server con la instancia guardada.
+
+    force_reconfigure=True (ver launcher.py --reconfigure): entra en modo
+    reconfiguración -- /form muestra los 3 campos ya existentes para
+    editar, en vez de solo lo que "falta" (nada falta en este caso).
     """
-    global _server
+    global _server, _reconfigure_mode
+    _reconfigure_mode = force_reconfigure
     import uvicorn
     # logger, no print(): empaquetado con PyInstaller la consola de Windows
     # puede no ser UTF-8 (o no existir siquiera, en un build sin consola) --

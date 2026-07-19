@@ -202,7 +202,46 @@ def test_owner_capture_manual_fallback_still_works(isolated_env):
         r = client.post("/save", data={"TELEGRAM_OWNER_ID": "111222333"}, follow_redirects=False)
         assert r.status_code == 303
 
-        r = client.get("/form", follow_redirects=False)
+
+def test_reconfigure_mode_shows_all_fields_prefilled_even_when_nothing_missing(isolated_env, monkeypatch):
+    """Con la config YA completa (nada falta), el modo reconfiguración debe
+    mostrar los 3 campos igual -- no redirigir a /done como haría el flujo
+    normal -- y precargados con el valor actual, para poder editarlos."""
+    monkeypatch.setattr(setup_web, "_reconfigure_mode", True)
+
+    with TestClient(setup_web.app) as client:
+        client.get("/form")  # crea .env desde .env.example
+        client.post(
+            "/save",
+            data={
+                "TELEGRAM_BOT_TOKEN": "old-token",
+                "TAVILY_API_KEY": "old-key",
+                "TELEGRAM_OWNER_ID": "111111111",
+            },
+        )
+
+        r = client.get("/form")
+        assert 'value="old-token"' in r.text
+        assert 'value="old-key"' in r.text
+        assert 'value="111111111"' in r.text
+
+
+def test_reconfigure_mode_save_goes_straight_to_done(isolated_env, monkeypatch):
+    """En modo reconfiguración, guardar debe ir directo a /done -- no tiene
+    sentido el /form secuencial de 'lo que falta' cuando nada falta."""
+    monkeypatch.setattr(setup_web, "_reconfigure_mode", True)
+
+    with TestClient(setup_web.app) as client:
+        client.get("/form")
+        client.post(
+            "/save",
+            data={
+                "TELEGRAM_BOT_TOKEN": "tok",
+                "TAVILY_API_KEY": "key",
+                "TELEGRAM_OWNER_ID": "222222222",
+            },
+        )
+        r = client.post("/save", data={"TELEGRAM_OWNER_ID": "333333333"}, follow_redirects=False)
         assert r.status_code == 303
         assert r.headers["location"] == "/done"
 

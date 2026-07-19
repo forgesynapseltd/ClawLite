@@ -8,6 +8,19 @@ La versión vigente vive en un único lugar: el archivo `VERSION` en la raíz de
 repo. `clawlite/_version.py` y `installer/ClawLite.iss` lo leen directo — no
 hay que actualizar el número en dos lugares.
 
+## [0.2.0] — 2026-07-19
+
+### Added
+- Log en archivo real (`clawlite.log`, en la carpeta de datos del usuario,
+  rotación 5MB/retención 3). Sin consola visible (`console=False`), no
+  quedaba ningún rastro de qué pasaba si algo fallaba — este sink es la
+  única fuente de verdad post-mortem disponible.
+- Acceso directo "Reconfigurar ClawLite" en el Start Menu: reabre el
+  asistente de configuración aunque ya esté todo configurado, con los 3
+  campos (token de Telegram, clave de Tavily, ID de dueño) precargados
+  con sus valores actuales para editar. Antes no había forma de volver a
+  configurar sin borrar el `.env` a mano o reinstalar.
+
 ## [0.1.1] — 2026-07-19
 
 ### Fixed

@@ -42,7 +42,7 @@ def _acquire_single_instance_lock():
     return mutex, already_running
 
 
-def _handle_already_running():
+def _handle_already_running(reconfigure: bool = False):
     """
     Ya hay una instancia corriendo. Se distingue de forma determinista,
     no adivinando, si el wizard está activo (responde en su puerto fijo)
@@ -51,6 +51,11 @@ def _handle_already_running():
       un segundo servidor compitiendo por el mismo puerto.
     - Wizard ya cerrado -> avisar con un mensaje nativo de Windows y salir,
       sin tocar .env/DB/Telegram (eso lo maneja solo la instancia real).
+
+    reconfigure=True (se pidió "Reconfigurar ClawLite" con el bot real ya
+    corriendo): no hay forma de abrir el wizard sin competir por el mismo
+    mutex/puerto que ya usa la instancia real -- se le dice explícito al
+    usuario qué hacer, en vez de mostrar el mensaje genérico.
     """
     import ctypes
     import httpx
@@ -64,6 +69,14 @@ def _handle_already_running():
     if wizard_active:
         import webbrowser
         webbrowser.open(f"http://127.0.0.1:{WIZARD_PORT}/")
+    elif reconfigure:
+        ctypes.windll.user32.MessageBoxW(
+            0,
+            "ClawLite ya está corriendo. Para reconfigurarlo, primero cerrá el "
+            "proceso ClawLite desde el Administrador de tareas y volvé a intentar.",
+            "ClawLite",
+            0x30,
+        )
     else:
         ctypes.windll.user32.MessageBoxW(
             0, "ClawLite ya está corriendo en segundo plano.", "ClawLite", 0x40,
@@ -85,13 +98,36 @@ def _set_data_home():
     os.chdir(data_home)
 
 
+def _configure_file_logging():
+    """
+    En un build console=False lanzado sin redirección de salida (el
+    escenario real de un usuario haciendo doble clic), sys.stdout y
+    sys.stderr son None. loguru no se cae por eso (degrada en silencio),
+    pero tampoco queda ningún rastro en ningún lado de qué pasó si algo
+    falla -- cero observabilidad real para el usuario o para soporte.
+    Este sink de archivo es la única fuente de verdad post-mortem
+    disponible sin consola. Rotación para no crecer sin límite; se
+    agrega ADEMÁS del handler default de loguru (a stderr), no lo
+    reemplaza -- no toca nada de lo que ya depende de él (ver
+    run_mcp_only() en main.py, que sí lo reconfigura para su propio
+    modo). Debe llamarse DESPUÉS de _set_data_home(): el archivo se
+    escribe relativo al cwd (la carpeta de datos), mismo criterio que
+    ./.env y ./data/clawlite.db.
+    """
+    from loguru import logger
+    logger.add("clawlite.log", rotation="5 MB", retention=3, level="INFO", encoding="utf-8")
+
+
 def main():
+    reconfigure = "--reconfigure" in sys.argv
+
     mutex, already_running = _acquire_single_instance_lock()
     if already_running:
-        _handle_already_running()
+        _handle_already_running(reconfigure=reconfigure)
         return
 
     _set_data_home()
+    _configure_file_logging()
 
     from clawlite.config import BOOTSTRAP_REQUIRED_KEYS
     from clawlite.setup import ENV_PATH, _read_env_values
@@ -99,14 +135,14 @@ def main():
     current = _read_env_values(ENV_PATH)
     missing = [k for k in BOOTSTRAP_REQUIRED_KEYS if not current.get(k)]
 
-    if missing:
+    if missing or reconfigure:
         import threading
         import webbrowser
 
         threading.Timer(1.5, lambda: webbrowser.open(f"http://127.0.0.1:{WIZARD_PORT}/")).start()
 
         from clawlite.setup_web import run as run_wizard
-        run_wizard(port=WIZARD_PORT)  # bloqueante -- retorna cuando /done pide el apagado
+        run_wizard(port=WIZARD_PORT, force_reconfigure=reconfigure)  # bloqueante -- retorna cuando /done pide el apagado
 
     from clawlite.main import main as run_bot
     run_bot()
