@@ -9,6 +9,7 @@
 [![Telegram](https://img.shields.io/badge/interface-Telegram-blue.svg)](https://telegram.org)
 [![Local First](https://img.shields.io/badge/local--first-yes-brightgreen.svg)]()
 [![Built by ForgeSynapse](https://img.shields.io/badge/built%20by-ForgeSynapse%20LTD-orange.svg)](https://forgesynapse.com)
+[![Download](https://img.shields.io/badge/download-Windows%20installer-success.svg)](https://github.com/forgesynapseltd/ClawLite/releases/latest)
 
 **[Getting Started](#getting-started) · [Features](#features) · [Architecture](#architecture) · [Contributing](#contributing)**
 
@@ -61,18 +62,30 @@ Enable an optional morning summary: ClawLite searches for relevant news and deli
 
 ## Getting Started
 
-### Prerequisites
+### Windows: one-click installer (recommended)
+
+No terminal, no admin rights, no technical knowledge required.
+
+1. Download the installer from the [latest release](https://github.com/forgesynapseltd/ClawLite/releases/latest).
+2. Run `ClawLite-Setup-X.Y.Z.exe` and follow the wizard.
+3. A setup page opens in your browser asking for your Telegram bot token and Tavily API key — get a bot token from `@BotFather` on Telegram (`/newbot`) and a free key from [tavily.com](https://tavily.com), then paste them in.
+
+That's it — ClawLite starts automatically once setup is complete.
+
+### Manual install (any OS, developers)
+
+#### Prerequisites
 
 - Python 3.11+
 - [Ollama](https://ollama.com) installed and running
 - A Telegram account
 - A [Tavily](https://tavily.com) API key (free tier is enough)
 
-### 1. Get your Telegram bot token
+#### 1. Get your Telegram bot token
 
 Open Telegram, find `@BotFather`, and run `/newbot`. Copy the token it gives you.
 
-### 2. Clone and configure
+#### 2. Clone and configure
 
 ```bash
 git clone https://github.com/forgesynapseltd/ClawLite.git
@@ -87,13 +100,13 @@ TELEGRAM_BOT_TOKEN=your_token_here
 TAVILY_API_KEY=your_tavily_key_here
 ```
 
-### 3. Pull the local model
+#### 3. Pull the local model
 
 ```bash
 ollama pull llama3.2
 ```
 
-### 4. Install and run
+#### 4. Install and run
 
 ```bash
 pip install -r requirements.txt
