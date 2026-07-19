@@ -1,0 +1,108 @@
+NOTICE
+
+ClawLite — Local-First Personal AI Assistant
+
+ForgeSynapse LTD
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PRIMARY COPYRIGHT
+
+Copyright (c) 2026 ForgeSynapse LTD
+Company No. 16692140 — England and Wales
+All rights reserved.
+
+ClawLite is developed and maintained by ForgeSynapse LTD.
+Architect: Claude (Anthropic) under direction of Fernando Salazar,
+Comandante, ForgeSynapse LTD.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+LICENSING
+
+ClawLite is fully open-source software licensed under the
+Apache License 2.0. See LICENSE for full terms.
+
+ForgeSynapse LTD retains the right to transfer or sell ClawLite
+as an independent project asset without transferring ownership
+of ForgeSynapse LTD as a company. See LICENSE — ASSET TRANSFER
+NOTICE for details.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+THIRD-PARTY SOFTWARE DEPENDENCIES
+
+ClawLite uses the following open-source dependencies:
+
+  python-telegram-bot (LGPL-3.0)
+  https://github.com/python-telegram-bot/python-telegram-bot
+  Used for Telegram Bot API integration.
+
+  tavily-python (MIT)
+  https://github.com/tavily-ai/tavily-python
+  Used for real-time web search capabilities.
+
+  ollama (MIT)
+  https://github.com/ollama/ollama
+  Used for local LLM inference.
+
+  groq (Apache 2.0)
+  https://github.com/groq/groq-python
+  Used as optional cloud LLM fallback.
+
+  sqlalchemy (MIT)
+  https://www.sqlalchemy.org/
+  Used for local database ORM.
+
+  sentence-transformers (Apache 2.0)
+  https://www.sbert.net/
+  Used for local embedding generation and semantic memory recall.
+
+  python-dotenv (BSD-3-Clause)
+  https://github.com/theskumar/python-dotenv
+  Used for environment variable management.
+
+  fastapi (MIT)
+  https://fastapi.tiangolo.com/
+  Used for internal health check API.
+
+  uvicorn (BSD-3-Clause)
+  https://www.uvicorn.org/
+  Used as ASGI server.
+
+  pydantic (MIT)
+  https://docs.pydantic.dev/
+  Used for data validation.
+
+  loguru (MIT)
+  https://github.com/Delgan/loguru
+  Used for application logging.
+
+  numpy (BSD-3-Clause)
+  https://numpy.org/
+  Used for vector operations in semantic memory.
+
+NOTE: The authoritative list of dependencies with exact version pins
+is maintained in requirements.txt.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TRADEMARK NOTICE
+
+"ClawLite" and "ForgeSynapse" are trademarks of ForgeSynapse LTD.
+Use of these trademarks requires prior written permission from
+ForgeSynapse LTD, except as required for reasonable and customary
+use in describing the origin of the Work.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CONTACT
+
+ForgeSynapse LTD
+Company No. 16692140 — England and Wales
+fsalazar@forgesynapse.com
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+"Your data. Your machine. Your assistant."
+— ForgeSynapse LTD, 2026

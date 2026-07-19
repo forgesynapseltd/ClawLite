@@ -1,0 +1,34 @@
+# ── Secretos y datos locales (NUNCA al repo) ──
+.env
+data/*
+!data/.gitkeep
+
+# ── Documentos internos (NUNCA al repo) ──
+sync_01_clawlite.md
+sync_02_arquitectura.md
+ROADMAP.md
+
+# ── Entornos virtuales ──
+.venv/
+venv/
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+installer/dist_installer/
+
+# ── IDE ──
+.vscode/
+.idea/
+*.swp
+
+# ── OS ──
+.DS_Store
+Thumbs.db
+
+# ── Logs ──
+*.log

@@ -1,0 +1,21 @@
+# ClawLite sandbox image — minimal Python environment
+# Used for executing untrusted code in full isolation
+FROM python:3.11-slim
+
+# Create non-root user
+RUN useradd -m -u 1000 sandboxuser
+
+# Install minimal common libraries that user code might need
+# pytest preinstalled so test-driven coding agent doesn't need to install per session
+RUN pip install --no-cache-dir \
+    requests==2.32.5 \
+    beautifulsoup4==4.12.3 \
+    numpy==2.0.0 \
+    pytest==8.3.3 \
+    && rm -rf /root/.cache/pip
+
+WORKDIR /workspace
+USER sandboxuser
+
+# Default entrypoint runs the script passed as argument
+ENTRYPOINT ["python", "-u"]
