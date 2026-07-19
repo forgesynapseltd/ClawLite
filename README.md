@@ -75,8 +75,8 @@ Open Telegram, find `@BotFather`, and run `/newbot`. Copy the token it gives you
 ### 2. Clone and configure
 
 ```bash
-git clone https://github.com/forgesynapse/clawlite.git
-cd clawlite
+git clone https://github.com/forgesynapseltd/ClawLite.git
+cd ClawLite
 cp .env.example .env
 ```
 
@@ -135,7 +135,7 @@ Telegram response
 - `ollama` — local LLM inference (llama3.2 by default)
 - `groq` — optional cloud fallback
 - `tavily-python` — real-time web search
-- `sentence-transformers` — local embeddings for semantic memory
+- `onnxruntime` — local embeddings for semantic memory (no PyTorch)
 - `sqlalchemy` + SQLite — persistent local storage
 - `loguru` — structured logging
 
