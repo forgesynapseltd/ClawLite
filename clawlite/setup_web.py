@@ -350,7 +350,18 @@ def run(host: str = "127.0.0.1", port: int = 8710):
     # tolerancia (degrada, no se cae) y es el mecanismo de logging que ya
     # usa el resto del proyecto.
     logger.info(f"🔧 Wizard de configuración en http://{host}:{port} — abrilo en tu navegador.")
-    cfg = uvicorn.Config(app, host=host, port=port, log_level="warning")
+    # log_config=None: uvicorn.Config() configura por defecto el logging
+    # estándar de Python (dictConfig) con un formatter que llama a
+    # sys.stdout.isatty() -- en un build de PyInstaller windowed (sin
+    # consola, sin redirección) sys.stdout es None, y esa llamada tira
+    # AttributeError -> ValueError: Unable to configure formatter 'default',
+    # matando el proceso antes de poder loguear nada. Confirmado con un
+    # build real lanzado sin redirección (el escenario real del usuario
+    # final -- validaciones previas siempre redirigían stdout/stderr a un
+    # archivo para poder leer el log, lo que enmascaraba este bug). ClawLite
+    # ya usa loguru en todo el proyecto -- no necesita ni quiere que uvicorn
+    # configure el logging estándar por su cuenta.
+    cfg = uvicorn.Config(app, host=host, port=port, log_level="warning", log_config=None)
     _server = uvicorn.Server(cfg)
     _server.run()
     _server = None

@@ -8,6 +8,19 @@ La versión vigente vive en un único lugar: el archivo `VERSION` en la raíz de
 repo. `clawlite/_version.py` y `installer/ClawLite.iss` lo leen directo — no
 hay que actualizar el número en dos lugares.
 
+## [0.1.1] — 2026-07-19
+
+### Fixed
+- El instalador se caía al arrancar en Windows con `ValueError: Unable to
+  configure formatter 'default'`. Causa: `uvicorn.Config()` configuraba por
+  defecto el logging estándar de Python, cuyo formatter llama
+  `sys.stdout.isatty()` — en un build empaquetado sin consola y sin
+  redirección de salida (el escenario real de un usuario haciendo doble
+  clic en el instalador), `sys.stdout` es `None`, y esa llamada rompía el
+  proceso antes de poder loguear nada. Corregido pasando `log_config=None`
+  a `uvicorn.Config()` (ClawLite ya usa loguru, no necesita el logging
+  propio de uvicorn).
+
 ## [0.1.0] — 2026-07-19
 
 Primera versión documentada del instalador de un clic (PyInstaller + Inno
