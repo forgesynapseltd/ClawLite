@@ -57,6 +57,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+Name: "autostart"; Description: "Iniciar ClawLite automáticamente al encender la computadora"; GroupDescription: "Inicio automático"
 
 [Files]
 Source: "..\dist\ClawLite\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -66,6 +67,7 @@ Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{group}\Reconfigurar {#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--reconfigure"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{userstartup}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: autostart
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent

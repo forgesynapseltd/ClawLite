@@ -8,6 +8,17 @@ La versión vigente vive en un único lugar: el archivo `VERSION` en la raíz de
 repo. `clawlite/_version.py` y `installer/ClawLite.iss` lo leen directo — no
 hay que actualizar el número en dos lugares.
 
+## [0.3.0] — 2026-07-19
+
+### Added
+- Ícono en la bandeja del sistema mientras ClawLite corre — confirmación
+  visual real de que está vivo, sin necesitar abrir ningún log ni
+  consola (mismo patrón que Discord/Dropbox). Menú con la opción
+  "Salir".
+- Inicio automático con Windows (tarea marcada por defecto en el
+  instalador): si el proceso se cierra por cualquier motivo, vuelve a
+  arrancar solo la próxima vez que el usuario inicia sesión.
+
 ## [0.2.0] — 2026-07-19
 
 ### Added

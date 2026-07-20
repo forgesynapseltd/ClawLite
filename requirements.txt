@@ -48,6 +48,7 @@ ollama==0.6.2
 onnxruntime==1.26.0
 orjson==3.11.9
 packaging==26.2
+pillow==12.3.0
 proto-plus==1.28.0
 protobuf==7.35.0
 pyasn1==0.6.3
@@ -60,6 +61,7 @@ Pygments==2.20.0
 PyJWT==2.13.0
 pyparsing==3.3.2
 pypdf==6.14.2
+pystray==0.19.5
 python-dotenv==1.2.2
 python-multipart==0.0.31
 python-telegram-bot==21.3

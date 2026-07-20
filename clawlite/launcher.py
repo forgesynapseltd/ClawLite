@@ -118,6 +118,51 @@ def _configure_file_logging():
     logger.add("clawlite.log", rotation="5 MB", retention=3, level="INFO", encoding="utf-8")
 
 
+def _make_tray_icon_image():
+    """Imagen generada en código (círculo simple) -- evita depender de un
+    archivo de ícono externo que haya que empaquetar aparte."""
+    from PIL import Image, ImageDraw
+
+    size = 64
+    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    draw.ellipse([4, 4, size - 4, size - 4], fill=(88, 101, 242, 255))
+    return img
+
+
+def _start_tray_icon():
+    """
+    Ícono en la bandeja del sistema -- confirmación visual real de que
+    ClawLite está corriendo, sin necesitar abrir ningún log ni consola
+    (mismo patrón que Discord/Dropbox/etc.). Corre en un thread daemon
+    aparte: pystray funciona bien en un thread secundario en Windows
+    (a diferencia de macOS, que exige el thread principal -- este
+    instalador apunta solo a Windows).
+
+    Alcance deliberadamente acotado: el único ítem accionable es "Salir"
+    (sale de TODO el proceso -- comparte el mismo criterio ya aceptado en
+    worker_pool.py de que un cierre abrupto es un riesgo ya asumido, no
+    uno nuevo). NO incluye "Reconfigurar" desde la bandeja: hacerlo bien
+    requeriría coordinar entre el thread del ícono y el thread principal
+    -- que puede estar bloqueado dentro del bot real o del wizard -- para
+    parar lo que esté corriendo y reabrir el wizard, una complejidad real
+    que no se justifica todavía cuando el acceso directo "Reconfigurar
+    ClawLite" del Start Menu ya cubre ese caso (con el proceso actual
+    cerrado primero).
+    """
+    import threading
+    import pystray
+
+    def on_exit(icon, item):
+        icon.stop()
+        os._exit(0)
+
+    menu = pystray.Menu(pystray.MenuItem("Salir", on_exit))
+    icon = pystray.Icon("ClawLite", _make_tray_icon_image(), "ClawLite", menu)
+    threading.Thread(target=icon.run, daemon=True).start()
+    return icon
+
+
 def main():
     reconfigure = "--reconfigure" in sys.argv
 
@@ -128,6 +173,7 @@ def main():
 
     _set_data_home()
     _configure_file_logging()
+    tray_icon = _start_tray_icon()
 
     from clawlite.config import BOOTSTRAP_REQUIRED_KEYS
     from clawlite.setup import ENV_PATH, _read_env_values

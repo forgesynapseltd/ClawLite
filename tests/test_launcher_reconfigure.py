@@ -5,16 +5,19 @@ Registered Office: Unit A, 82 James Carter Road, Mildenhall, IP28 7DE, UK.
 Licensed under the Apache License, Version 2.0. See LICENSE and NOTICE for full terms.
 SPDX-License-Identifier: Apache-2.0
 
-tests/test_launcher_reconfigure.py — Regresión de dos gaps reales
-reportados por Fernando usando el instalador ya publicado:
+tests/test_launcher_reconfigure.py — Regresión de gaps reales reportados
+por Fernando usando el instalador ya publicado:
 1. Sin consola visible (console=False), no queda ningún rastro en disco
    de qué hizo ClawLite -- _configure_file_logging() es el único punto
    de observabilidad real disponible.
 2. Sin forma de reabrir el asistente de configuración una vez que la
    config ya está completa -- launcher.py --reconfigure resuelve esto.
+3. Sin ninguna confirmación visual de que ClawLite está corriendo --
+   _start_tray_icon() agrega un ícono real en la bandeja del sistema.
 """
 
 import sys
+import time
 
 import ctypes
 import httpx
@@ -69,3 +72,26 @@ def test_handle_already_running_with_reconfigure_shows_explicit_message(monkeypa
 
     assert "reconfigurarlo" in shown["text"].lower()
     assert "administrador de tareas" in shown["text"].lower()
+
+
+def test_make_tray_icon_image_returns_a_real_image():
+    """La imagen del ícono debe generarse sin depender de ningún archivo
+    externo -- confirma que PIL genera un objeto de imagen válido."""
+    img = launcher._make_tray_icon_image()
+    assert img.size == (64, 64)
+
+
+def test_start_tray_icon_runs_for_real_without_crashing():
+    """Prueba real (no mockeada) de que pystray arranca en un thread
+    daemon aparte sin lanzar ninguna excepción, y que queda realmente
+    visible en la bandeja -- reproduce exactamente el patrón que usa
+    _start_tray_icon() en el launcher real."""
+    icon = launcher._start_tray_icon()
+    try:
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline and not icon.visible:
+            time.sleep(0.1)
+        assert icon.visible, "el ícono no llegó a quedar visible en 5s -- pystray no arrancó bien en un thread daemon"
+    finally:
+        icon.stop()
+        time.sleep(0.3)
