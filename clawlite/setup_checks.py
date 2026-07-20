@@ -12,7 +12,9 @@ con las flags/llamadas EXACTAS que ClawLite usa en producción. Si el
 smoke test pasa, la instalación es apta sin importar su versión.
 """
 
+import os
 import subprocess
+import tempfile
 import uuid
 from enum import Enum
 
@@ -31,6 +33,15 @@ OLLAMA_CONNECT_TIMEOUT = 10.0        # Conexión al daemon local de Ollama -- si
 OLLAMA_READ_TIMEOUT = 60.0           # Timeout de INACTIVIDAD, no de tiempo total -- se reinicia con cada chunk recibido. Necesario para no cortar una descarga de modelo grande que progresa lento pero real, mientras SÍ corta algo genuinamente colgado (sin datos por 60s).
 OLLAMA_WRITE_TIMEOUT = 60.0          # Mismo criterio que read, para el lado de escritura de la request.
 OLLAMA_POOL_TIMEOUT = 10.0           # Tiempo de espera para obtener una conexión del pool de httpx.
+
+# Instalador oficial de Ollama para Windows -- verificado: usa Inno Setup
+# (igual que ClawLite, soporta /VERYSILENT de forma estándar), licencia MIT
+# (permite automatizar/redistribuir sin problema legal), ~1.36GB -- pesa
+# demasiado para empaquetarlo DENTRO del instalador de ClawLite, se
+# descarga en el momento desde la URL oficial de GitHub Releases.
+OLLAMA_INSTALLER_URL = "https://github.com/ollama/ollama/releases/latest/download/OllamaSetup.exe"
+OLLAMA_INSTALLER_DOWNLOAD_TIMEOUT = httpx.Timeout(connect=10.0, read=60.0, write=60.0, pool=10.0)
+OLLAMA_INSTALLER_RUN_TIMEOUT = 300   # el instalador silencioso de Ollama no debería tardar más que esto
 
 
 class CheckStatus(Enum):
@@ -184,3 +195,49 @@ def check_ollama(default_model: str) -> CheckResult:
         return CheckResult(CheckStatus.FUNCTIONAL_CHECK_FAILED, f"Error real ejecutando el modelo: {e}")
 
     return CheckResult(CheckStatus.OK)
+
+
+def download_and_install_ollama(progress_cb=None) -> CheckResult:
+    """
+    Descarga el instalador oficial de Ollama y lo corre en modo silencioso
+    -- automatiza la única pieza que check_ollama() no resuelve sola (el
+    modelo en sí ya se descarga automático dentro de check_ollama/
+    ensure_ollama_models_available, esto es solo para cuando falta la
+    aplicación Ollama misma).
+
+    progress_cb(downloaded_bytes, total_bytes) se llama periódicamente
+    durante la descarga -- sin esto, la UI quedaría sin ninguna señal de
+    progreso durante varios minutos en una conexión normal (el instalador
+    pesa ~1.36GB).
+    """
+    installer_path = os.path.join(tempfile.gettempdir(), "ClawLite-OllamaSetup.exe")
+
+    try:
+        with httpx.stream(
+            "GET", OLLAMA_INSTALLER_URL, follow_redirects=True,
+            timeout=OLLAMA_INSTALLER_DOWNLOAD_TIMEOUT,
+        ) as resp:
+            resp.raise_for_status()
+            total = int(resp.headers.get("content-length", 0))
+            downloaded = 0
+            with open(installer_path, "wb") as f:
+                for chunk in resp.iter_bytes(chunk_size=1024 * 1024):
+                    f.write(chunk)
+                    downloaded += len(chunk)
+                    if progress_cb:
+                        progress_cb(downloaded, total)
+    except Exception as e:
+        return CheckResult(CheckStatus.NOT_INSTALLED, f"No se pudo descargar el instalador de Ollama: {e}")
+
+    try:
+        subprocess.run([installer_path, "/VERYSILENT"], timeout=OLLAMA_INSTALLER_RUN_TIMEOUT, check=True)
+    except Exception as e:
+        return CheckResult(CheckStatus.NOT_INSTALLED, f"El instalador de Ollama no pudo completarse: {e}")
+    finally:
+        try:
+            os.remove(installer_path)
+        except OSError:
+            pass
+
+    from clawlite.config import config
+    return check_ollama(config.OLLAMA_MODEL)

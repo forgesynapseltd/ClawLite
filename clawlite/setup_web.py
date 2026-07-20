@@ -35,7 +35,7 @@ from clawlite.setup import (
     _claim_telegram_owner_arm,
     _claim_telegram_owner_poll,
 )
-from clawlite.setup_checks import check_docker, check_ollama
+from clawlite.setup_checks import check_docker, check_ollama, download_and_install_ollama
 
 
 class TaskState(Enum):
@@ -48,7 +48,13 @@ class TaskState(Enum):
 _tasks: dict = {
     "docker": {"state": TaskState.IDLE, "result": None},
     "ollama": {"state": TaskState.IDLE, "result": None},
+    "ollama_install": {"state": TaskState.IDLE, "result": None},
 }
+
+# Progreso de la descarga del instalador de Ollama (~1.36GB) -- separado
+# de _tasks porque necesita más granularidad que IDLE/RUNNING/DONE; la UI
+# lo sondea aparte para mostrar una barra de progreso real.
+_ollama_install_progress: dict = {"downloaded": 0, "total": 0}
 
 _owner_claim_since: int | None = None
 _reconfigure_mode: bool = False  # ver run(force_reconfigure=...) y form_page()
@@ -107,6 +113,43 @@ async def check_status(request: Request):
     return JSONResponse(_task_json(name))
 
 
+async def _run_ollama_install_background():
+    def progress_cb(downloaded: int, total: int):
+        _ollama_install_progress["downloaded"] = downloaded
+        _ollama_install_progress["total"] = total
+
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(None, download_and_install_ollama, progress_cb)
+    _tasks["ollama_install"] = {"state": TaskState.DONE, "result": result}
+
+
+async def start_ollama_install(request: Request):
+    """Idempotente, mismo criterio que start_check: si ya está corriendo o
+    ya terminó, no relanza -- evita dos descargas de 1.36GB en paralelo si
+    el usuario hace doble clic en el botón."""
+    current = _tasks["ollama_install"]
+    if current["state"] == TaskState.RUNNING:
+        pass
+    elif current["state"] == TaskState.DONE:
+        pass
+    else:
+        _tasks["ollama_install"] = {"state": TaskState.RUNNING, "result": None}
+        _ollama_install_progress["downloaded"] = 0
+        _ollama_install_progress["total"] = 0
+        asyncio.create_task(_run_ollama_install_background())
+    return JSONResponse(_task_json("ollama_install"))
+
+
+async def ollama_install_status(request: Request):
+    """Combina el estado de la tarea (_task_json) con el progreso de
+    descarga en curso -- la UI necesita ambos para mostrar una barra de
+    progreso real durante los varios minutos que puede tardar."""
+    data = _task_json("ollama_install")
+    data["downloaded"] = _ollama_install_progress["downloaded"]
+    data["total"] = _ollama_install_progress["total"]
+    return JSONResponse(data)
+
+
 async def claim_owner_arm(request: Request):
     global _owner_claim_since
     current = _read_env_values(ENV_PATH)
@@ -161,7 +204,21 @@ async def home(request: Request):
     <h1>🔧 ClawLite — Configuración inicial</h1>
     <p>Antes de empezar, verifico que Docker y Ollama estén listos.</p>
     <div id="docker-status" class="status">Docker: sin verificar</div>
+    <div id="docker-help" style="display:none; margin: 8px 0 16px;">
+        <p class="hint">Docker es <b>opcional</b> -- solo hace falta si querés que ClawLite escriba y
+        ejecute código. Para instalarlo:</p>
+        <ol class="hint">
+            <li>Descargalo de <a href="https://www.docker.com/products/docker-desktop/" target="_blank">docker.com/products/docker-desktop</a></li>
+            <li>Corré el instalador (pide permisos de administrador)</li>
+            <li>Te va a pedir <b>reiniciar la computadora</b> -- es normal, hacelo</li>
+            <li>Después de reiniciar, abrí Docker Desktop una vez y esperá a que arranque</li>
+        </ol>
+    </div>
     <div id="ollama-status" class="status">Ollama: sin verificar</div>
+    <div id="ollama-install-area" style="display:none;">
+        <button onclick="installOllama()">Instalar Ollama automáticamente</button>
+        <div id="ollama-install-status" class="status" style="display:none;"></div>
+    </div>
     <button onclick="startChecks()">Verificar</button>
     <p><a href="/form">Continuar a la configuración →</a></p>
     <script>
@@ -172,6 +229,12 @@ async def home(request: Request):
             if (r.state === 'done') {
                 el.className = 'status ' + (r.status === 'ok' ? 'ok' : 'failed');
                 el.textContent = name + ': ' + r.status + (r.detail ? ' — ' + r.detail : '');
+                if (r.status !== 'ok' && name === 'docker') {
+                    document.getElementById('docker-help').style.display = 'block';
+                }
+                if (r.status !== 'ok' && name === 'ollama') {
+                    document.getElementById('ollama-install-area').style.display = 'block';
+                }
                 return;
             }
             el.className = 'status running';
@@ -184,6 +247,31 @@ async def home(request: Request):
         await fetch('/check/ollama/start', {method: 'POST'});
         poll('docker');
         poll('ollama');
+    }
+    async function installOllama() {
+        const statusEl = document.getElementById('ollama-install-status');
+        statusEl.style.display = 'block';
+        statusEl.className = 'status running';
+        statusEl.textContent = 'Iniciando descarga…';
+        await fetch('/install-ollama/start', {method: 'POST'});
+        while (true) {
+            const r = await fetch('/install-ollama/status').then(r => r.json());
+            if (r.state === 'done') {
+                statusEl.className = 'status ' + (r.status === 'ok' ? 'ok' : 'failed');
+                statusEl.textContent = r.status === 'ok'
+                    ? 'Ollama instalado correctamente.'
+                    : ('No se pudo instalar: ' + r.detail);
+                if (r.status === 'ok') { poll('ollama'); }
+                return;
+            }
+            if (r.total > 0) {
+                const mb = (b) => (b / (1024 * 1024)).toFixed(0);
+                const pct = Math.round((r.downloaded / r.total) * 100);
+                statusEl.className = 'status running';
+                statusEl.textContent = 'Descargando Ollama… ' + mb(r.downloaded) + ' / ' + mb(r.total) + ' MB (' + pct + '%)';
+            }
+            await new Promise(res => setTimeout(res, 1500));
+        }
     }
     </script>
     """
@@ -355,6 +443,8 @@ app = Starlette(
         Route("/", home),
         Route("/check/{name}/start", start_check, methods=["POST"]),
         Route("/check/{name}/status", check_status),
+        Route("/install-ollama/start", start_ollama_install, methods=["POST"]),
+        Route("/install-ollama/status", ollama_install_status),
         Route("/claim-telegram-owner/arm", claim_owner_arm, methods=["POST"]),
         Route("/claim-telegram-owner/poll", claim_owner_poll, methods=["POST"]),
         Route("/form", form_page),

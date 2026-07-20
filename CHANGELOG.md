@@ -8,6 +8,19 @@ La versión vigente vive en un único lugar: el archivo `VERSION` en la raíz de
 repo. `clawlite/_version.py` y `installer/ClawLite.iss` lo leen directo — no
 hay que actualizar el número en dos lugares.
 
+## [0.4.0] — 2026-07-20
+
+### Added
+- El wizard ahora ofrece instalar Ollama automáticamente si no lo
+  detecta (descarga el instalador oficial con barra de progreso real y
+  lo corre en modo silencioso) — antes había que instalarlo aparte a
+  mano, con riesgo real de que un usuario nuevo se equivocara o
+  abandonara la instalación.
+- Docker (opcional, solo para escribir/ejecutar código) ahora muestra
+  instrucciones paso a paso claras cuando falta, en vez de solo decir
+  "no está instalado" — nunca se instala automáticamente (pide
+  permisos de administrador y reiniciar la PC).
+
 ## [0.3.0] — 2026-07-19
 
 ### Added
